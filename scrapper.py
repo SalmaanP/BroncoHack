@@ -5,10 +5,11 @@ import time
 import re
 import string
 import secret
+import classify
 
 client = MongoClient('mongodb://localhost')
 db = client['bronco']
-
+model, vectorizer = classify.train()
 
 def getTweets():
     auth = tweepy.OAuthHandler(secret.app_key, secret.app_secret)
@@ -35,11 +36,15 @@ def getTweets():
                        "createdTime": status.created_at, "coordinates": status.coordinates}
                 db['tweets'].insert_one(obj)
 
-                if status.author.screen_name == 'maitray_shah':
-                    reply = '@'+status.author.screen_name+' lol'
+                prediction = classify.predict(model, vectorizer, cleaned_tweet)
+
+                if prediction[0] == 1 and status.author.screen_name == 'maitray_shah':
+                    reply = 'Hi @'+status.author.screen_name+', Sorry to hear you had to go through that. Iffy can ' \
+                                                             'help you in filing a report. Click on this ' \
+                                                             'http://iffybot.surge.sh/ '
                     api.update_status(reply, status.id)
 
-                print status.text
+                print status.text, prediction
 
         def on_error(self, status_code):
             print status_code
